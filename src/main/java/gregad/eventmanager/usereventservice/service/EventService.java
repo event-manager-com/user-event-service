@@ -12,14 +12,14 @@ import java.util.List;
  * @author Greg Adler
  */
 public interface EventService {
-    List<SocialNetworkConnectionsDto> getAllConnections(long id);
+    List<SocialNetworkConnectionsDto> getAllConnections(int id);
     EventResponseDto createEvent(EventDto event);
-    EventResponseDto updateEvent(long ownerId, EventDto event);
-    EventResponseDto deleteEvent(long ownerId, long eventId);
-    EventResponseDto getEventById(long ownerId, long eventId);
-    List<EventResponseDto> getEventByTitle(long ownerId, String title);
-    List<EventResponseDto> getFutureEvents(long ownerId);
-    List<EventResponseDto> getEventsByDate(long ownerId, LocalDate from, LocalDate to);
-    List<EventResponseDto> getEventsBySentNetworks(long ownerId, List<String> networks);
+    EventResponseDto updateEvent(int ownerId, EventDto event);
+    EventResponseDto deleteEvent(int ownerId, long eventId);
+    EventResponseDto getEventById(int ownerId, long eventId);
+    List<EventResponseDto> getEventByTitle(int ownerId, String title);
+    List<EventResponseDto> getFutureEvents(int ownerId);
+    List<EventResponseDto> getEventsByDate(int ownerId, LocalDate from, LocalDate to);
+    List<EventResponseDto> getEventsBySentNetworks(int ownerId, List<String> networks);
 
 }

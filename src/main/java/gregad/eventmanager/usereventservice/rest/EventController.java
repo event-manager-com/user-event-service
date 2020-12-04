@@ -9,8 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static gregad.eventmanager.usereventservice.api.ApiConstants.EVENTS;
-import static gregad.eventmanager.usereventservice.api.ApiConstants.SEARCH;
-import static gregad.eventmanager.usereventservice.api.RouterApiConstants.*;
+import static gregad.eventmanager.usereventservice.api.ExternalApiConstants.*;
 
 /*
  * @author Greg Adler
@@ -22,7 +21,7 @@ public class EventController {
     private EventService eventService;
     
     @GetMapping(value = CONNECTIONS+"/{id}")
-    List<SocialNetworkConnectionsDto>getUserConnections(@PathVariable long id){
+    List<SocialNetworkConnectionsDto>getUserConnections(@PathVariable int id){
         return eventService.getAllConnections(id);
     }
     
@@ -32,37 +31,37 @@ public class EventController {
     }
     
     @PatchMapping(value = "/{id}")
-    EventResponseDto updateEvent(@PathVariable long id, @RequestBody EventDto eventDto){
-        return eventService.updateEvent(id,eventDto);
+    EventResponseDto updateEvent(@PathVariable int ownerId, @RequestBody EventDto eventDto){
+        return eventService.updateEvent(ownerId,eventDto);
     }
     
     @DeleteMapping
-    EventResponseDto deleteEvent(@RequestParam long ownerId,@RequestParam long eventId){
+    EventResponseDto deleteEvent(@RequestParam int ownerId,@RequestParam long eventId){
         return eventService.deleteEvent(ownerId,eventId);
     }
     
     @GetMapping
-    EventResponseDto getEventById(@RequestParam long ownerId,@RequestParam long eventId){
+    EventResponseDto getEventById(@RequestParam int ownerId,@RequestParam long eventId){
         return eventService.getEventById(ownerId,eventId);
     }
     
     @GetMapping(value = SEARCH+"/{id}")
-    List<EventResponseDto> getFutureEvents(@PathVariable long id){
+    List<EventResponseDto> getFutureEvents(@PathVariable int id){
         return eventService.getFutureEvents(id);
     }
 
     @GetMapping(value = SEARCH+BY_TITLE)
-    List<EventResponseDto> getEventsByTitle(@RequestParam long id,@RequestParam String title){
+    List<EventResponseDto> getEventsByTitle(@RequestParam int id,@RequestParam String title){
         return eventService.getEventByTitle(id,title);
     }
 
     @GetMapping(value = SEARCH+BY_NETWORKS)
-    List<EventResponseDto> getEventsByNetworks(@RequestParam long id,@RequestParam List<String> networks){
+    List<EventResponseDto> getEventsByNetworks(@RequestParam int id,@RequestParam List<String> networks){
         return eventService.getEventsBySentNetworks(id,networks);
     }
 
     @GetMapping(value = SEARCH+BY_DATES)
-    List<EventResponseDto> getEventsByNetworks(@RequestParam long id, @RequestParam LocalDate from, @RequestParam LocalDate to ){
+    List<EventResponseDto> getEventsByNetworks(@RequestParam int id, @RequestParam LocalDate from, @RequestParam LocalDate to ){
         return eventService.getEventsByDate(id,from,to);
     }
 }

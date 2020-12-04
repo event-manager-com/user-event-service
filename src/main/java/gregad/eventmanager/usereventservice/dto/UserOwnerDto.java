@@ -1,5 +1,6 @@
 package gregad.eventmanager.usereventservice.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,8 +13,9 @@ import java.util.List;
 @Setter
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 public class UserOwnerDto {
-    private long id;
+    private int id;
     private String name;
     private List<String> allowedSocialNetworks;
 }

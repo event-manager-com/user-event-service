@@ -52,6 +52,11 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${jackson-datatype-jsr310.version}</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>

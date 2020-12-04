@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -13,11 +14,10 @@ import java.util.Set;
  */
 @Repository
 public interface EventDao extends MongoRepository<EventEntity,Long> {
+
+    Optional<List<EventEntity>> findAllByOwnerIdAndTitleContaining(int ownerId, String title);
+
+    Optional<List<EventEntity>> findAllByOwnerId(int ownerId);
     
-    List<EventEntity> findAllByOwnerIdAndTitleContaining(long ownerId, String title);
-
-    List<EventEntity> findAllByOwnerId(long ownerId);
-
-    List<EventEntity> findByOwnerIdAndEventDateBetween(long ownerId, LocalDate from, LocalDate to);
-
+    Optional<EventEntity> findByIdAndOwnerId(long eventId, int ownerId);
 }

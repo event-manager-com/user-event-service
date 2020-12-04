@@ -1,11 +1,10 @@
 package gregad.eventmanager.usereventservice.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import gregad.eventmanager.usereventservice.dto.UserOwnerDto;
+import lombok.*;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -20,11 +19,12 @@ import java.util.Map;
 @Getter
 @Setter
 @NoArgsConstructor
-@Builder
-@Document(collection = "events")
+@AllArgsConstructor
+@Document(collection = " future-event")
 public class EventEntity {
     @Id
     private long id;
+    @Indexed
     private User owner;
     private String title;
     private String description;
@@ -32,6 +32,8 @@ public class EventEntity {
     private LocalDate eventDate;
     @JsonFormat(pattern = "KK:mm a")
     private LocalTime eventTime;
+    private String imageUrl;
+    private String telegramChannelRef;
     private Map<String,List<User>>sentToNetworkConnections;
     private Map<String, List<User>> invited;
     private Map<String, List<Message>> correspondences;

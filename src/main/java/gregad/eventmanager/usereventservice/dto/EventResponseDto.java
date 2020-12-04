@@ -3,10 +3,7 @@ package gregad.eventmanager.usereventservice.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import gregad.eventmanager.usereventservice.model.Message;
 import gregad.eventmanager.usereventservice.model.User;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -19,7 +16,7 @@ import java.util.Map;
 @Getter
 @Setter
 @NoArgsConstructor
-@Builder
+@AllArgsConstructor
 public class EventResponseDto {
     private long id;
     private User owner;
@@ -29,6 +26,8 @@ public class EventResponseDto {
     private LocalDate eventDate;
     @JsonFormat(pattern = "KK:mm a")
     private LocalTime eventTime;
+    private String imageUrl;
+    private String telegramChannelRef;
     private Map<String,List<User>>sentToNetworkConnections;
     private Map<String, List<User>> invited;
     private Map<String, List<Message>> correspondences;

@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SocialNetworkUserDto {
-    private String id;
-    private String name;
+public class Token {
+    private String token;
 }

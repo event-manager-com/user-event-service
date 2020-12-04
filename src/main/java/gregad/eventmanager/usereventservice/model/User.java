@@ -10,7 +10,8 @@ import java.util.List;
 @Setter
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 public class User {
-    private long id;
+    private int id;
     private String name;
 }
