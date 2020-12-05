@@ -1,7 +1,7 @@
 package gregad.eventmanager.usereventservice.rest;
 
 import gregad.eventmanager.usereventservice.dto.*;
-import gregad.eventmanager.usereventservice.service.EventService;
+import gregad.eventmanager.usereventservice.services.event_service.EventService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

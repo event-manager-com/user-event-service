@@ -1,11 +1,10 @@
-package gregad.eventmanager.usereventservice.service;
+package gregad.eventmanager.usereventservice.services.event_service;
 
 import gregad.eventmanager.usereventservice.dto.EventDto;
 import gregad.eventmanager.usereventservice.dto.EventResponseDto;
 import gregad.eventmanager.usereventservice.dto.SocialNetworkConnectionsDto;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 /**

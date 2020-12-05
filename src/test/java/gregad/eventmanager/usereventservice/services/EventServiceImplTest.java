@@ -1,4 +1,4 @@
-package gregad.eventmanager.usereventservice.service;
+package gregad.eventmanager.usereventservice.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gregad.eventmanager.usereventservice.UserEventServiceApplication;
@@ -7,27 +7,24 @@ import gregad.eventmanager.usereventservice.dao.SequenceDao;
 import gregad.eventmanager.usereventservice.dto.EventDto;
 import gregad.eventmanager.usereventservice.dto.SocialNetworkConnectionsDto;
 import gregad.eventmanager.usereventservice.model.User;
+import gregad.eventmanager.usereventservice.services.event_service.EventService;
+import gregad.eventmanager.usereventservice.services.event_service.EventServiceImpl;
+import gregad.eventmanager.usereventservice.services.token_service.TokenHolderService;
+import gregad.eventmanager.usereventservice.services.token_service.TokenHolderServiceImpl;
 import lombok.SneakyThrows;
-import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import static org.mockito.Mockito.when;
 
 /**
  * @author Greg Adler
@@ -47,13 +44,15 @@ class EventServiceImplTest {
     private SequenceDao sequenceRepo;
     private EventDao eventRepo;
     private ObjectMapper objectMapper=new ObjectMapper();
+    private TokenHolderService tokenHolderService;
 
     @BeforeEach
     public void init(){
         restTemplate=Mockito.mock(RestTemplate.class);
         sequenceRepo=Mockito.mock(SequenceDao.class);
         eventRepo=Mockito.mock(EventDao.class);
-        eventService=new EventServiceImpl(restTemplate,sequenceRepo,eventRepo,objectMapper);
+        eventService=new EventServiceImpl(restTemplate,sequenceRepo,eventRepo,objectMapper,
+                new TokenHolderServiceImpl(objectMapper,restTemplate));
     }
 
     @SneakyThrows

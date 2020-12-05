@@ -1,4 +1,4 @@
-package gregad.eventmanager.usereventservice.service;
+package gregad.eventmanager.usereventservice.services.event_service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gregad.eventmanager.usereventservice.dao.EventDao;
@@ -7,14 +7,15 @@ import gregad.eventmanager.usereventservice.dto.*;
 import gregad.eventmanager.usereventservice.model.DatabaseSequence;
 import gregad.eventmanager.usereventservice.model.EventEntity;
 import gregad.eventmanager.usereventservice.model.User;
+import gregad.eventmanager.usereventservice.services.token_service.TokenHolderService;
+
+import static gregad.eventmanager.usereventservice.api.ApiConstants.*;
+import static gregad.eventmanager.usereventservice.api.ExternalApiConstants.*;
+
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,57 +40,54 @@ public class EventServiceImpl implements EventService {
     private String historyServiceUrl;
     @Value("${security.service.url}")
     private String securityServiceUrl;
-
-    private String token;
-    @Value("${security.user.name}")
-    private String secUserName;
-    @Value("${security.user.password}")
-    private String secPassword;
-    private NamePassword namePassword;
-
+    
+    private TokenHolderService tokenHolderService;
     private RestTemplate restTemplate;
     private SequenceDao sequenceRepo;
     private EventDao eventRepo;
     private ObjectMapper objectMapper;
 
     @Autowired
-    public EventServiceImpl(RestTemplate restTemplate, SequenceDao sequenceRepo, EventDao eventRepo, ObjectMapper objectMapper) {
+    public EventServiceImpl(RestTemplate restTemplate, SequenceDao sequenceRepo, 
+                            EventDao eventRepo, ObjectMapper objectMapper,TokenHolderService tokenHolderService) {
         this.restTemplate = restTemplate;
         this.sequenceRepo = sequenceRepo;
         this.eventRepo = eventRepo;
         this.objectMapper = objectMapper;
-    }
-
-    public void initToken(){
-        namePassword=new NamePassword(secUserName,secPassword);
-        updateToken();
-    }
-
-    @SneakyThrows
-    @Scheduled(cron = "0 15 0 * * *")
-    private void updateToken(){
-        String jsonNamePassword = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(namePassword);
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> request = new HttpEntity<>(jsonNamePassword, httpHeaders);
-        token = restTemplate.postForObject(securityServiceUrl + "/generate", request, Token.class).getToken();
+        this.tokenHolderService=tokenHolderService;
     }
 
     @Override
-    public List<SocialNetworkConnectionsDto> getAllConnections(int id) {
-        String[] userNetworks = restTemplate.getForObject(userServiceUrl+"/networks" + "/" + id, String[].class);
+    public List<SocialNetworkConnectionsDto> getAllConnections(int id) {      
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER,tokenHolderService.getToken());
+        String[] userNetworks = getUserNetworks(id,headers);
         if (userNetworks==null || userNetworks.length==0){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"No Social networks not found to user id:"+id);
         }
-        SocialNetworkConnectionsDto[] networkConnections =
-                restTemplate.getForObject(getRouterUrl(id, userNetworks), SocialNetworkConnectionsDto[].class);
-        assert networkConnections != null;
+        SocialNetworkConnectionsDto[] networkConnections =getUserNetworksConnections(id,userNetworks,headers);
         return Arrays.asList(networkConnections);
+    }
+
+    private SocialNetworkConnectionsDto[] getUserNetworksConnections(int id, String[] userNetworks, HttpHeaders headers) {
+        ResponseEntity<SocialNetworkConnectionsDto[]> networkConnections =
+                restTemplate.exchange(getRouterUrl(id, userNetworks),
+                        HttpMethod.GET,
+                        new HttpEntity<>(headers),
+                        SocialNetworkConnectionsDto[].class);
+        return networkConnections.getBody();
+    }
+
+    private String[] getUserNetworks(int id, HttpHeaders headers) {
+        ResponseEntity<String[]> userNetworksResponseEntity =
+                restTemplate.exchange(userServiceUrl+"/networks" + "/" + id,
+                        HttpMethod.GET,new HttpEntity<>(headers), String[].class);
+        return userNetworksResponseEntity.getBody();
     }
 
     private String getRouterUrl(int id, String[] userNetworks) {
         String res=routerUrl+USER+CONNECTIONS+"?id="+id+"&networks="+userNetworks[0];
-        for (int i = 0; i < userNetworks.length; i++) {
+        for (int i = 1; i < userNetworks.length; i++) {
             res=res+","+userNetworks[i];
         }
         return res;
@@ -126,6 +124,7 @@ public class EventServiceImpl implements EventService {
       
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER,tokenHolderService.getToken());
         EventDto eventDto = new EventDto();
                 eventDto.setId(eventEntity.getId());
                 eventDto.setOwner(eventEntity.getOwner());
@@ -137,7 +136,7 @@ public class EventServiceImpl implements EventService {
                 eventDto.setTelegramChannelRef(eventEntity.getTelegramChannelRef());
                 eventDto.setSendToNetworks(eventEntity.getSentToNetworkConnections());
         String eventJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eventDto);
-        HttpEntity<String> request = new HttpEntity<String>(eventJson, headers);
+        HttpEntity<String> request = new HttpEntity<>(eventJson, headers);
         Boolean isAdded = restTemplate.postForObject(routerUrl+USER+EVENTS, request, Boolean.class);
         if (isAdded==null ||!isAdded){
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"");//TODO fill message
@@ -164,7 +163,7 @@ public class EventServiceImpl implements EventService {
         DatabaseSequence databaseSequence = sequenceRepo.findById(1).orElse(null);
         long id;
         if (databaseSequence==null){
-            sequenceRepo.save(new DatabaseSequence(1,1l));
+            sequenceRepo.save(new DatabaseSequence(1, 1L));
             id=1;
         }else {
             id=databaseSequence.getSeq()+1;
@@ -188,6 +187,7 @@ public class EventServiceImpl implements EventService {
                 !eventEntity.getEventTime().equals(event.getEventTime())){
             eventEntity.setEventDate(event.getEventDate());
             eventEntity.setEventTime(event.getEventTime());
+            sendEvent(eventEntity);
         }
         eventRepo.save(eventEntity);
         return toEventResponseDto(eventEntity);
@@ -207,7 +207,7 @@ public class EventServiceImpl implements EventService {
     public EventResponseDto getEventById(int ownerId, long eventId) {
         EventEntity eventEntity = eventRepo.findByIdAndOwnerId(eventId,ownerId).orElse(null);
         if (eventEntity==null){
-             eventEntity = restTemplate.getForObject(historyServiceUrl+SEARCH+"?eventId="+eventId+"&ownerId="+ownerId, EventEntity.class);
+             eventEntity =restGetEventById(ownerId,eventId);
         }
         if (eventEntity==null){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -215,12 +215,22 @@ public class EventServiceImpl implements EventService {
         }
         return toEventResponseDto(eventEntity);
     }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private EventEntity restGetEventById(int ownerId, long eventId) {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HEADER,tokenHolderService.getToken());
+        ResponseEntity<EventEntity> response = restTemplate.exchange(historyServiceUrl + SEARCH + "?eventId=" + eventId + "&ownerId=" + ownerId,
+                HttpMethod.GET,
+                new HttpEntity<>(httpHeaders),
+                EventEntity.class);
+        return response.getBody();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public List<EventResponseDto> getEventByTitle(int ownerId, String title) {
         List<EventEntity>events=eventRepo.findAllByOwnerIdAndTitleContaining(ownerId,title).orElse(new ArrayList<>());
-        EventEntity[] eventsFromHistory = 
-                restTemplate.getForObject(historyServiceUrl + SEARCH + BY_TITLE + "?ownerId=" + ownerId + "&title=" + title, EventEntity[].class);
+        EventEntity[] eventsFromHistory = restGetEventByTitle(ownerId,title);
         if (events.isEmpty() &&(eventsFromHistory==null || eventsFromHistory.length==0)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Events with title:"+title+" not found in user id:"+ownerId+" storage");
@@ -229,7 +239,18 @@ public class EventServiceImpl implements EventService {
         events.addAll(Arrays.asList(eventsFromHistory));
         return events.stream().map(this::toEventResponseDto).collect(Collectors.toList());
     }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private EventEntity[] restGetEventByTitle(int ownerId, String title) {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HEADER,tokenHolderService.getToken());
+        ResponseEntity<EventEntity[]> response = restTemplate.exchange(historyServiceUrl + SEARCH + BY_TITLE + "?ownerId=" + ownerId + "&title=" + title,
+                HttpMethod.GET,
+                new HttpEntity<>(httpHeaders),
+                EventEntity[].class);
+        return response.getBody();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public List<EventResponseDto> getFutureEvents(int ownerId) {
         List<EventEntity>entities=eventRepo.findAllByOwnerId(ownerId).orElseThrow(()->{
@@ -281,7 +302,10 @@ public class EventServiceImpl implements EventService {
 
     private EventEntity[] getFromHistory(int ownerId, LocalDate from, LocalDate to) {
         String url=historyServiceUrl + SEARCH+ BY_DATES + "?ownerId=" + ownerId + "&from=" + from + "&to=" + to;
-        return restTemplate.getForObject(url, EventEntity[].class);
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HEADER,tokenHolderService.getToken());
+        ResponseEntity<EventEntity[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(httpHeaders), EventEntity[].class);
+        return response.getBody();
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
@@ -292,11 +316,8 @@ public class EventServiceImpl implements EventService {
         Set<EventEntity> events= eventRepo.findAllByOwnerId(ownerId).orElse(new ArrayList<>()).stream()
                 .filter(e-> e.getSentToNetworkConnections().keySet().stream().anyMatch(networks::contains))
                 .collect(Collectors.toSet());
-        String url=historyServiceUrl+ SEARCH+BY_NETWORKS+"?ownerId="+ownerId+"&networks="+networks.get(0);
-        for (int i = 1; i < networks.size(); i++) {
-             url=url+","+networks.get(i);
-        }
-        EventEntity[] eventsFromHistory = restTemplate.getForObject(url, EventEntity[].class);
+      
+        EventEntity[] eventsFromHistory = restGetEventBySentNetworks(ownerId,networks);
         if (events.isEmpty() &&(eventsFromHistory==null || eventsFromHistory.length==0)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "No events not fount to user id:"+ownerId+" with the specified networks");
@@ -304,5 +325,16 @@ public class EventServiceImpl implements EventService {
         assert eventsFromHistory != null;
         events.addAll(Arrays.asList(eventsFromHistory));
         return events.stream().map(this::toEventResponseDto).collect(Collectors.toList());
+    }
+
+    private EventEntity[] restGetEventBySentNetworks(int ownerId, List<String> networks) {
+        String url=historyServiceUrl+ SEARCH+BY_NETWORKS+"?ownerId="+ownerId+"&networks="+networks.get(0);
+        for (int i = 1; i < networks.size(); i++) {
+            url=url+","+networks.get(i);
+        }
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HEADER,tokenHolderService.getToken());
+        ResponseEntity<EventEntity[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(httpHeaders), EventEntity[].class);
+        return response.getBody();
     }
 }
