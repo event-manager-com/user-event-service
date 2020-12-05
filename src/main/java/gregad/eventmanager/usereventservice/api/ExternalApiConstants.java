@@ -10,4 +10,7 @@ public interface ExternalApiConstants {
     String BY_NETWORKS="/networks";
     String BY_DATES = "/dates";
     String SEARCH = "/search";
+    String VALIDATE="/validate";
+    String GENERATE="/generate";
+
 }

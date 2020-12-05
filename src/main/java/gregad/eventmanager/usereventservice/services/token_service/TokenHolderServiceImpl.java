@@ -1,6 +1,7 @@
 package gregad.eventmanager.usereventservice.services.token_service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gregad.eventmanager.usereventservice.api.ExternalApiConstants;
 import gregad.eventmanager.usereventservice.dto.NamePassword;
 import gregad.eventmanager.usereventservice.dto.Token;
 import lombok.SneakyThrows;
@@ -52,7 +53,7 @@ public class TokenHolderServiceImpl implements TokenHolderService {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> request = new HttpEntity<>(jsonNamePassword, httpHeaders);
-        token = restTemplate.postForObject(securityServiceUrl + "/generate", request, Token.class).getToken();
+        token = restTemplate.postForObject(securityServiceUrl + ExternalApiConstants.GENERATE, request, Token.class).getToken();
     }
 
     @Override
