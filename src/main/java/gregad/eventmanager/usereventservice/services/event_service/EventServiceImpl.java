@@ -15,6 +15,7 @@ import static gregad.eventmanager.usereventservice.api.ExternalApiConstants.*;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -31,11 +32,8 @@ import static gregad.eventmanager.usereventservice.api.ExternalApiConstants.*;
  * @author Greg Adler
  */
 @Service
+@RefreshScope
 public class EventServiceImpl implements EventService {
-    @Value("${router.service.url}")
-    private String routerUrl;
-    @Value("${user.service.url}")
-    private String userServiceUrl;
     @Value("${history.service.url}")
     private String historyServiceUrl;
     @Value("${security.service.url}")
@@ -57,45 +55,9 @@ public class EventServiceImpl implements EventService {
         this.tokenHolderService=tokenHolderService;
     }
 
-    @Override
-    public List<SocialNetworkConnectionsDto> getAllConnections(int id) {      
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER,tokenHolderService.getToken());
-        String[] userNetworks = getUserNetworks(id,headers);
-        if (userNetworks==null || userNetworks.length==0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"No Social networks not found to user id:"+id);
-        }
-        SocialNetworkConnectionsDto[] networkConnections =getUserNetworksConnections(id,userNetworks,headers);
-        return Arrays.asList(networkConnections);
-    }
 
-    private SocialNetworkConnectionsDto[] getUserNetworksConnections(int id, String[] userNetworks, HttpHeaders headers) {
-        ResponseEntity<SocialNetworkConnectionsDto[]> networkConnections =
-                restTemplate.exchange(getRouterUrl(id, userNetworks),
-                        HttpMethod.GET,
-                        new HttpEntity<>(headers),
-                        SocialNetworkConnectionsDto[].class);
-        return networkConnections.getBody();
-    }
-
-    private String[] getUserNetworks(int id, HttpHeaders headers) {
-        ResponseEntity<String[]> userNetworksResponseEntity =
-                restTemplate.exchange(userServiceUrl+"/networks" + "/" + id,
-                        HttpMethod.GET,new HttpEntity<>(headers), String[].class);
-        return userNetworksResponseEntity.getBody();
-    }
-
-    private String getRouterUrl(int id, String[] userNetworks) {
-        String res=routerUrl+USER+CONNECTIONS+"?id="+id+"&networks="+userNetworks[0];
-        for (int i = 1; i < userNetworks.length; i++) {
-            res=res+","+userNetworks[i];
-        }
-        return res;
-    }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public EventResponseDto createEvent(EventDto event) {
-        Map<String, List<User>> sendToNetworks = event.getSendToNetworks();
         EventEntity eventEntity = new  EventEntity();
                 eventEntity.setId(getEventNextId());
                 eventEntity.setOwner(event.getOwner());
@@ -105,43 +67,12 @@ public class EventServiceImpl implements EventService {
                 eventEntity.setEventTime(event.getEventTime());
                 eventEntity.setImageUrl(event.getImageUrl());
                 eventEntity.setTelegramChannelRef(event.getTelegramChannelRef());
-                eventEntity.setSentToNetworkConnections(sendToNetworks);
-                eventEntity.setInvited(new HashMap<>());
-                eventEntity.setCorrespondences(new HashMap<>());
-               
-        if (sendToNetworks.size()==0 ||
-                sendToNetworks.values().stream().mapToLong(List::size).sum() ==0){
-            eventRepo.save(eventEntity);
-            return toEventResponseDto(eventEntity);
-        }
-        sendEvent(eventEntity);
+                eventEntity.setInvited(new ArrayList<>());
+                eventEntity.setCorrespondences(new ArrayList<>());
         eventRepo.save(eventEntity);
         return toEventResponseDto(eventEntity);
     }
-
-    @SneakyThrows
-    private void sendEvent(EventEntity eventEntity) {
-      
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER,tokenHolderService.getToken());
-        EventDto eventDto = new EventDto();
-                eventDto.setId(eventEntity.getId());
-                eventDto.setOwner(eventEntity.getOwner());
-                eventDto.setTitle(eventEntity.getTitle());
-                eventDto.setDescription(eventEntity.getDescription());
-                eventDto.setEventDate(eventEntity.getEventDate());
-                eventDto.setEventTime(eventEntity.getEventTime());
-                eventDto.setImageUrl(eventEntity.getImageUrl());
-                eventDto.setTelegramChannelRef(eventEntity.getTelegramChannelRef());
-                eventDto.setSendToNetworks(eventEntity.getSentToNetworkConnections());
-        String eventJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eventDto);
-        HttpEntity<String> request = new HttpEntity<>(eventJson, headers);
-        Boolean isAdded = restTemplate.postForObject(routerUrl+USER+EVENTS, request, Boolean.class);
-        if (isAdded==null ||!isAdded){
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"");//TODO fill message
-        }
-    }
+    
 
     private EventResponseDto toEventResponseDto(EventEntity eventEntity) {
         EventResponseDto res = new EventResponseDto();
@@ -153,7 +84,6 @@ public class EventServiceImpl implements EventService {
                 res.setEventTime(eventEntity.getEventTime());
                 res.setImageUrl(eventEntity.getImageUrl());
                 res.setTelegramChannelRef(eventEntity.getTelegramChannelRef());
-                res.setSentToNetworkConnections(eventEntity.getSentToNetworkConnections());
                 res.setInvited(eventEntity.getInvited());
                 res.setCorrespondences(eventEntity.getCorrespondences());
      return res;
@@ -187,7 +117,6 @@ public class EventServiceImpl implements EventService {
                 !eventEntity.getEventTime().equals(event.getEventTime())){
             eventEntity.setEventDate(event.getEventDate());
             eventEntity.setEventTime(event.getEventTime());
-            sendEvent(eventEntity);
         }
         eventRepo.save(eventEntity);
         return toEventResponseDto(eventEntity);
@@ -291,6 +220,28 @@ public class EventServiceImpl implements EventService {
         }
         return fromRepo.stream().map(this::toEventResponseDto).collect(Collectors.toList());
     }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public List<EventResponseDto> getEventsByInvitedUser(int ownerId, int userInvitedId) {
+        EventEntity[] eventsFromHistory = restGetEventByGuestId(ownerId, userInvitedId);
+        List<EventEntity> eventsFromRepo = eventRepo.findAllByOwnerId(ownerId)
+                .orElse(new ArrayList<>())
+                .stream()
+                .filter(e -> e.getInvited().stream().anyMatch(u -> u.getId() == userInvitedId))
+                .collect(Collectors.toList());
+        eventsFromRepo.addAll(Arrays.asList(eventsFromHistory));
+        return eventsFromRepo.stream().map(this::toEventResponseDto).collect(Collectors.toList());
+    }
+
+    private EventEntity[] restGetEventByGuestId(int ownerId, int guestId) {
+        String url=historyServiceUrl+ SEARCH+BY_GUEST+"?ownerId="+ownerId+"&guestId="+guestId;
+        
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HEADER,tokenHolderService.getToken());
+        ResponseEntity<EventEntity[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(httpHeaders), EventEntity[].class);
+        return response.getBody();
+    }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
 
     private List<EventEntity> getFromRepo(int ownerId, LocalDate from, LocalDate to) {
         return eventRepo.findAllByOwnerId(ownerId).orElse(new ArrayList<>())
@@ -308,33 +259,5 @@ public class EventServiceImpl implements EventService {
         return response.getBody();
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    @Override
-    public List<EventResponseDto> getEventsBySentNetworks(int ownerId, List<String> networks) {
-        if (networks.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Have not specified social networks");
-        }
-        Set<EventEntity> events= eventRepo.findAllByOwnerId(ownerId).orElse(new ArrayList<>()).stream()
-                .filter(e-> e.getSentToNetworkConnections().keySet().stream().anyMatch(networks::contains))
-                .collect(Collectors.toSet());
-      
-        EventEntity[] eventsFromHistory = restGetEventBySentNetworks(ownerId,networks);
-        if (events.isEmpty() &&(eventsFromHistory==null || eventsFromHistory.length==0)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No events not fount to user id:"+ownerId+" with the specified networks");
-        }
-        assert eventsFromHistory != null;
-        events.addAll(Arrays.asList(eventsFromHistory));
-        return events.stream().map(this::toEventResponseDto).collect(Collectors.toList());
-    }
-
-    private EventEntity[] restGetEventBySentNetworks(int ownerId, List<String> networks) {
-        String url=historyServiceUrl+ SEARCH+BY_NETWORKS+"?ownerId="+ownerId+"&networks="+networks.get(0);
-        for (int i = 1; i < networks.size(); i++) {
-            url=url+","+networks.get(i);
-        }
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.set(HEADER,tokenHolderService.getToken());
-        ResponseEntity<EventEntity[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(httpHeaders), EventEntity[].class);
-        return response.getBody();
-    }
+    
 }

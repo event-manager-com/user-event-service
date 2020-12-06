@@ -1,6 +1,7 @@
 package gregad.eventmanager.usereventservice.rest;
 
-import gregad.eventmanager.usereventservice.dto.*;
+import gregad.eventmanager.usereventservice.dto.EventDto;
+import gregad.eventmanager.usereventservice.dto.EventResponseDto;
 import gregad.eventmanager.usereventservice.services.event_service.EventService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +21,6 @@ public class EventController {
     @Autowired
     private EventService eventService;
     
-    @GetMapping(value = CONNECTIONS+"/{id}")
-    List<SocialNetworkConnectionsDto>getUserConnections(@PathVariable int id){
-        return eventService.getAllConnections(id);
-    }
     
     @PostMapping
     EventResponseDto createEvent(@RequestBody EventDto event){
@@ -46,18 +43,18 @@ public class EventController {
     }
     
     @GetMapping(value = SEARCH+"/{id}")
-    List<EventResponseDto> getFutureEvents(@PathVariable int id){
-        return eventService.getFutureEvents(id);
+    List<EventResponseDto> getFutureEvents(@PathVariable int ownerId){
+        return eventService.getFutureEvents(ownerId);
     }
 
     @GetMapping(value = SEARCH+BY_TITLE)
-    List<EventResponseDto> getEventsByTitle(@RequestParam int id,@RequestParam String title){
-        return eventService.getEventByTitle(id,title);
+    List<EventResponseDto> getEventsByTitle(@RequestParam int ownerId,@RequestParam String title){
+        return eventService.getEventByTitle(ownerId,title);
     }
 
-    @GetMapping(value = SEARCH+BY_NETWORKS)
-    List<EventResponseDto> getEventsByNetworks(@RequestParam int id,@RequestParam List<String> networks){
-        return eventService.getEventsBySentNetworks(id,networks);
+    @GetMapping(value = SEARCH+BY_GUEST)
+    List<EventResponseDto> getEventsByNetworks(@RequestParam int ownerId,@RequestParam int guestId){
+        return eventService.getEventsByInvitedUser(ownerId, guestId);
     }
 
     @GetMapping(value = SEARCH+BY_DATES)

@@ -29,6 +29,5 @@ public class EventDto {
     private LocalTime eventTime;
     private String imageUrl;
     private String telegramChannelRef;
-    private Map<String,List<User>>sendToNetworks;
 
 }
