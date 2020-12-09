@@ -81,4 +81,8 @@ class EventServiceImplTest {
     @Test
     void getEventsBySentNetworks() {
     }
+
+    @Test
+    void addEventNewGuest() {
+    }
 }

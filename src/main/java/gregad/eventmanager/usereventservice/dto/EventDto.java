@@ -25,7 +25,7 @@ public class EventDto {
     private String description;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate eventDate;
-    @JsonFormat(pattern = "KK:mm a")
+    @JsonFormat(pattern = "hh:mm a")
     private LocalTime eventTime;
     private String imageUrl;
     private String telegramChannelRef;

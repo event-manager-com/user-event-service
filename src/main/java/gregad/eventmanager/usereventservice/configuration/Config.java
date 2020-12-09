@@ -24,10 +24,6 @@ public class Config {
     @Value("${rest.template.timeout}")
     int timeout;
 
-    @Bean
-    public RestTemplateBuilder restTemplateBuilder(){
-        return new RestTemplateBuilder();
-    }
 
     @Bean
     @LoadBalanced
@@ -44,11 +40,11 @@ public class Config {
     }
 
 //    @Bean
-    public FilterRegistrationBean<JwtTokenValidatorFilter> filterRegistrationBean() {
-        FilterRegistrationBean < JwtTokenValidatorFilter > registrationBean = new FilterRegistrationBean();
-        JwtTokenValidatorFilter filter=new JwtTokenValidatorFilter(securityServiceUrl,timeout,restTemplate(restTemplateBuilder()));
-
-        registrationBean.setFilter(filter);
-        return registrationBean;
-    }
+//    public FilterRegistrationBean<JwtTokenValidatorFilter> filterRegistrationBean() {
+//        FilterRegistrationBean < JwtTokenValidatorFilter > registrationBean = new FilterRegistrationBean();
+//        JwtTokenValidatorFilter filter=new JwtTokenValidatorFilter(securityServiceUrl,timeout,restTemplate(restTemplateBuilder()));
+//
+//        registrationBean.setFilter(filter);
+//        return registrationBean;
+//    }
 }

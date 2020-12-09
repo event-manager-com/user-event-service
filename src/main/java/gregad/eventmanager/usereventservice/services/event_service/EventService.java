@@ -2,6 +2,7 @@ package gregad.eventmanager.usereventservice.services.event_service;
 
 import gregad.eventmanager.usereventservice.dto.EventDto;
 import gregad.eventmanager.usereventservice.dto.EventResponseDto;
+import gregad.eventmanager.usereventservice.model.User;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,5 +19,6 @@ public interface EventService {
     List<EventResponseDto> getFutureEvents(int ownerId);
     List<EventResponseDto> getEventsByDate(int ownerId, LocalDate from, LocalDate to);
     List<EventResponseDto> getEventsByInvitedUser(int ownerId, int userInvitedId);
+    List<User> addEventNewGuest(long eventId, User user);
 
 }

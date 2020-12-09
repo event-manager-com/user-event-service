@@ -1,38 +1,37 @@
 package gregad.eventmanager.usereventservice.services.event_service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gregad.event_manager.loggerstarter.aspect.DoLogging;
 import gregad.eventmanager.usereventservice.dao.EventDao;
 import gregad.eventmanager.usereventservice.dao.SequenceDao;
-import gregad.eventmanager.usereventservice.dto.*;
+import gregad.eventmanager.usereventservice.dto.EventDto;
+import gregad.eventmanager.usereventservice.dto.EventResponseDto;
 import gregad.eventmanager.usereventservice.model.DatabaseSequence;
 import gregad.eventmanager.usereventservice.model.EventEntity;
 import gregad.eventmanager.usereventservice.model.User;
 import gregad.eventmanager.usereventservice.services.token_service.TokenHolderService;
-
-import static gregad.eventmanager.usereventservice.api.ApiConstants.*;
-import static gregad.eventmanager.usereventservice.api.ExternalApiConstants.*;
-
-import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static gregad.eventmanager.usereventservice.api.ApiConstants.HEADER;
 import static gregad.eventmanager.usereventservice.api.ExternalApiConstants.*;
 
 /**
  * @author Greg Adler
  */
 @Service
-@RefreshScope
+@DoLogging(cleanLogDaysAgo = 10)
 public class EventServiceImpl implements EventService {
     @Value("${history.service.url}")
     private String historyServiceUrl;
@@ -113,11 +112,8 @@ public class EventServiceImpl implements EventService {
         eventEntity.setTitle(event.getTitle());
         eventEntity.setDescription(event.getDescription());
         eventEntity.setImageUrl(event.getImageUrl());
-        if (!eventEntity.getEventDate().equals(event.getEventDate() )||
-                !eventEntity.getEventTime().equals(event.getEventTime())){
-            eventEntity.setEventDate(event.getEventDate());
-            eventEntity.setEventTime(event.getEventTime());
-        }
+        eventEntity.setEventDate(event.getEventDate());
+        eventEntity.setEventTime(event.getEventTime());
         eventRepo.save(eventEntity);
         return toEventResponseDto(eventEntity);
     }
@@ -230,9 +226,13 @@ public class EventServiceImpl implements EventService {
                 .filter(e -> e.getInvited().stream().anyMatch(u -> u.getId() == userInvitedId))
                 .collect(Collectors.toList());
         eventsFromRepo.addAll(Arrays.asList(eventsFromHistory));
+        if (eventsFromRepo.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No events not fount to user id:"+ownerId+" with guest id:"+userInvitedId);
+        }
         return eventsFromRepo.stream().map(this::toEventResponseDto).collect(Collectors.toList());
     }
-
+    
     private EventEntity[] restGetEventByGuestId(int ownerId, int guestId) {
         String url=historyServiceUrl+ SEARCH+BY_GUEST+"?ownerId="+ownerId+"&guestId="+guestId;
         
@@ -259,5 +259,15 @@ public class EventServiceImpl implements EventService {
         return response.getBody();
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
+    @Override
+    public List<User> addEventNewGuest(long eventId, User user) {
+        EventEntity eventEntity = eventRepo.findById(eventId).orElseThrow(() -> {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Event id:" + eventId + " not found");
+        });
+        eventEntity.getInvited().add(user);
+        eventRepo.save(eventEntity);
+        return eventEntity.getInvited();
+    }
 }

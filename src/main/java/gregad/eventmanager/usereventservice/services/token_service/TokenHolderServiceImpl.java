@@ -1,13 +1,13 @@
 package gregad.eventmanager.usereventservice.services.token_service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gregad.event_manager.loggerstarter.aspect.DoLogging;
 import gregad.eventmanager.usereventservice.api.ExternalApiConstants;
 import gregad.eventmanager.usereventservice.dto.NamePassword;
 import gregad.eventmanager.usereventservice.dto.Token;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,7 +21,7 @@ import javax.annotation.PostConstruct;
  * @author Greg Adler
  */
 @Component
-@RefreshScope
+@DoLogging
 public class TokenHolderServiceImpl implements TokenHolderService {
     private ObjectMapper objectMapper;
     private RestTemplate restTemplate;
