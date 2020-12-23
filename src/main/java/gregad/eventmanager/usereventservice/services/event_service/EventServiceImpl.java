@@ -66,6 +66,7 @@ public class EventServiceImpl implements EventService {
                 eventEntity.setEventTime(event.getEventTime());
                 eventEntity.setImageUrl(event.getImageUrl());
                 eventEntity.setTelegramChannelRef(event.getTelegramChannelRef());
+                eventEntity.setApprovedGuests(new ArrayList<>());
                 eventEntity.setInvited(new ArrayList<>());
                 eventEntity.setCorrespondences(new ArrayList<>());
         eventRepo.save(eventEntity);
@@ -84,6 +85,7 @@ public class EventServiceImpl implements EventService {
                 res.setImageUrl(eventEntity.getImageUrl());
                 res.setTelegramChannelRef(eventEntity.getTelegramChannelRef());
                 res.setInvited(eventEntity.getInvited());
+                res.setApprovedGuests(eventEntity.getApprovedGuests());
                 res.setCorrespondences(eventEntity.getCorrespondences());
      return res;
     }
@@ -134,10 +136,10 @@ public class EventServiceImpl implements EventService {
         if (eventEntity==null){
              eventEntity =restGetEventById(ownerId,eventId);
         }
-        if (eventEntity==null){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Event id:"+eventId+" not found in user id:"+ownerId+" storage");
-        }
+//        if (eventEntity==null){
+//            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+//                    "Event id:"+eventId+" not found in user id:"+ownerId+" storage");
+//        }
         return toEventResponseDto(eventEntity);
     }
 
@@ -156,10 +158,10 @@ public class EventServiceImpl implements EventService {
     public List<EventResponseDto> getEventByTitle(int ownerId, String title) {
         List<EventEntity>events=eventRepo.findAllByOwnerIdAndTitleContaining(ownerId,title).orElse(new ArrayList<>());
         EventEntity[] eventsFromHistory = restGetEventByTitle(ownerId,title);
-        if (events.isEmpty() &&(eventsFromHistory==null || eventsFromHistory.length==0)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Events with title:"+title+" not found in user id:"+ownerId+" storage");
-        }
+//        if (events.isEmpty() &&(eventsFromHistory==null || eventsFromHistory.length==0)){
+//            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+//                    "Events with title:"+title+" not found in user id:"+ownerId+" storage");
+//        }
         assert eventsFromHistory != null;
         events.addAll(Arrays.asList(eventsFromHistory));
         return events.stream().map(this::toEventResponseDto).collect(Collectors.toList());
@@ -178,10 +180,7 @@ public class EventServiceImpl implements EventService {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public List<EventResponseDto> getFutureEvents(int ownerId) {
-        List<EventEntity>entities=eventRepo.findAllByOwnerId(ownerId).orElseThrow(()->{
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No future events not found to user id:"+ownerId);
-        });
+        List<EventEntity>entities=eventRepo.findAllByOwnerId(ownerId).orElse(new ArrayList<>());
         return entities.stream().map(this::toEventResponseDto).collect(Collectors.toList());
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -195,46 +194,46 @@ public class EventServiceImpl implements EventService {
             EventEntity[]eventsFromHistory=getFromHistory(ownerId,from,now);
             List<EventEntity> allFromRepo = getFromRepo(ownerId,now,to);
             allFromRepo.addAll(Arrays.asList(eventsFromHistory));
-            if (allFromRepo.isEmpty() && eventsFromHistory.length==0){
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No events not fount to user id:"+ownerId+" between dates("+from+")("+to+")");
-            }
+//            if (allFromRepo.isEmpty() && eventsFromHistory.length==0){
+//                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+//                        "No events not fount to user id:"+ownerId+" between dates("+from+")("+to+")");
+//            }
             return allFromRepo.stream().map(this::toEventResponseDto).collect(Collectors.toList());
         }
         if (now.isAfter(to)){
             EventEntity[] fromHistory = getFromHistory(ownerId, from, to);
-            if ( fromHistory.length==0){
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No events not fount to user id:"+ownerId+" between dates("+from+")("+to+")");
-            }
+//            if ( fromHistory.length==0){
+//                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+//                        "No events not fount to user id:"+ownerId+" between dates("+from+")("+to+")");
+//            }
             return Stream.of(fromHistory).map(this::toEventResponseDto).collect(Collectors.toList());
         }
         List<EventEntity> fromRepo = getFromRepo(ownerId, from, to);
-        if (fromRepo.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No events not fount to user id:"+ownerId+" between dates("+from+")("+to+")");
-        }
+//        if (fromRepo.isEmpty()){
+//            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+//                    "No events not fount to user id:"+ownerId+" between dates("+from+")("+to+")");
+//        }
         return fromRepo.stream().map(this::toEventResponseDto).collect(Collectors.toList());
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Override
-    public List<EventResponseDto> getEventsByInvitedUser(int ownerId, int userInvitedId) {
-        EventEntity[] eventsFromHistory = restGetEventByGuestId(ownerId, userInvitedId);
+    public List<EventResponseDto> getEventsByGuestName(int ownerId, String userInvited) {
+        EventEntity[] eventsFromHistory = restGetEventByGuest(ownerId, userInvited);
         List<EventEntity> eventsFromRepo = eventRepo.findAllByOwnerId(ownerId)
                 .orElse(new ArrayList<>())
                 .stream()
-                .filter(e -> e.getInvited().stream().anyMatch(u -> u.getId() == userInvitedId))
+                .filter(e -> e.getApprovedGuests().stream().anyMatch(u -> u.getName().equals(userInvited)))
                 .collect(Collectors.toList());
         eventsFromRepo.addAll(Arrays.asList(eventsFromHistory));
-        if (eventsFromRepo.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No events not fount to user id:"+ownerId+" with guest id:"+userInvitedId);
-        }
+//        if (eventsFromRepo.isEmpty()){
+//            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+//                    "No events not fount to user id:"+ownerId+" with guest id:"+userInvitedId);
+//        }
         return eventsFromRepo.stream().map(this::toEventResponseDto).collect(Collectors.toList());
     }
     
-    private EventEntity[] restGetEventByGuestId(int ownerId, int guestId) {
-        String url=historyServiceUrl+ SEARCH+BY_GUEST+"?ownerId="+ownerId+"&guestId="+guestId;
+    private EventEntity[] restGetEventByGuest(int ownerId, String guest) {
+        String url=historyServiceUrl+ SEARCH+BY_GUEST+"?ownerId="+ownerId+"&guest="+guest;
         
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.set(HEADER,tokenHolderService.getToken());
@@ -261,7 +260,7 @@ public class EventServiceImpl implements EventService {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public List<User> addEventNewGuest(long eventId, User user) {
+    public List<User> addEventInvitedUser(long eventId, User user) {
         EventEntity eventEntity = eventRepo.findById(eventId).orElseThrow(() -> {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Event id:" + eventId + " not found");
@@ -269,5 +268,16 @@ public class EventServiceImpl implements EventService {
         eventEntity.getInvited().add(user);
         eventRepo.save(eventEntity);
         return eventEntity.getInvited();
+    }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public List<User> addEventNewApprovedGuest(long eventId, User user) {
+        EventEntity eventEntity = eventRepo.findById(eventId).orElseThrow(() -> {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Event id:" + eventId + " not found");
+        });
+        eventEntity.getApprovedGuests().add(user);
+        eventRepo.save(eventEntity);
+        return eventEntity.getApprovedGuests();
     }
 }

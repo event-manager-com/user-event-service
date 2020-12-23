@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static gregad.eventmanager.usereventservice.api.ApiConstants.EVENTS;
+import static gregad.eventmanager.usereventservice.api.ApiConstants.INVITED;
 import static gregad.eventmanager.usereventservice.api.ExternalApiConstants.*;
 
 /*
@@ -39,10 +40,16 @@ public class EventController {
         return eventService.deleteEvent(ownerId,eventId);
     }
     
+    @PostMapping(value = INVITED+"/{eventId}")
+    public List<User> addInvitedUserToEvent(@PathVariable long eventId,
+                                      @RequestBody User user){
+        return eventService.addEventInvitedUser(eventId, user);
+    }
+
     @PostMapping(value = BY_GUEST+"/{eventId}")
     public List<User> addGuestToEvent(@PathVariable long eventId,
                                       @RequestBody User user){
-        return eventService.addEventNewGuest(eventId, user);
+        return eventService.addEventNewApprovedGuest(eventId, user);
     }
     
     @GetMapping
@@ -61,12 +68,12 @@ public class EventController {
     }
 
     @GetMapping(value = SEARCH+BY_GUEST)
-    List<EventResponseDto> getEventsByNetworks(@RequestParam int ownerId,@RequestParam int guestId){
-        return eventService.getEventsByInvitedUser(ownerId, guestId);
+    List<EventResponseDto> getEventsByGuest(@RequestParam int ownerId,@RequestParam String guest){
+        return eventService.getEventsByGuestName(ownerId, guest);
     }
 
     @GetMapping(value = SEARCH+BY_DATES)
-    List<EventResponseDto> getEventsByNetworks(@RequestParam int ownerId,
+    List<EventResponseDto> getEventsByDates(@RequestParam int ownerId,
                                                @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                                                @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to ){
         return eventService.getEventsByDate(ownerId,from,to);

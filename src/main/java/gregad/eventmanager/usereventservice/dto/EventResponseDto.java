@@ -29,6 +29,7 @@ public class EventResponseDto {
     private String imageUrl;
     private String telegramChannelRef;
     private List<User> invited;
+    private List<User> approvedGuests;
     private List<Message> correspondences;
 
 }
