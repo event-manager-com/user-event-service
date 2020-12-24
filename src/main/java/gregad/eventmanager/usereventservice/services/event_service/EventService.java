@@ -21,4 +21,5 @@ public interface EventService {
     List<EventResponseDto> getEventsByGuestName(int ownerId, String userInvited);
     List<User> addEventInvitedUser(long eventId, User user);
     List<User> addEventNewApprovedGuest(long eventId, User user);
+    List<User> removeEventNewApprovedGuest(long eventId, int guestId);
 }

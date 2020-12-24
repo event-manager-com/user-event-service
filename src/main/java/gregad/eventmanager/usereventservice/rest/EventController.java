@@ -51,6 +51,12 @@ public class EventController {
                                       @RequestBody User user){
         return eventService.addEventNewApprovedGuest(eventId, user);
     }
+
+    @DeleteMapping(value = BY_GUEST)
+    public List<User> addGuestToEvent(@RequestParam long eventId,
+                                      @RequestParam int guestId){
+        return eventService.removeEventNewApprovedGuest(eventId, guestId);
+    }
     
     @GetMapping
     EventResponseDto getEventById(@RequestParam int ownerId,@RequestParam long eventId){

@@ -265,7 +265,9 @@ public class EventServiceImpl implements EventService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Event id:" + eventId + " not found");
         });
-        eventEntity.getInvited().add(user);
+        if (!eventEntity.getInvited().contains(user)){
+            eventEntity.getInvited().add(user);
+        }
         eventRepo.save(eventEntity);
         return eventEntity.getInvited();
     }
@@ -276,8 +278,23 @@ public class EventServiceImpl implements EventService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Event id:" + eventId + " not found");
         });
-        eventEntity.getApprovedGuests().add(user);
+        List<User> approvedGuests = eventEntity.getApprovedGuests();
+        if (!approvedGuests.contains(user)){
+            approvedGuests.add(user);
+        }
         eventRepo.save(eventEntity);
-        return eventEntity.getApprovedGuests();
+        return approvedGuests;
+    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public List<User> removeEventNewApprovedGuest(long eventId, int guestId) {
+        EventEntity eventEntity = eventRepo.findById(eventId).orElseThrow(() -> {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Event id:" + eventId + " not found");
+        });
+        List<User> approvedGuests = eventEntity.getApprovedGuests();
+        approvedGuests.removeIf(u->u.getId()==guestId);
+        eventRepo.save(eventEntity);
+        return approvedGuests;
     }
 }
