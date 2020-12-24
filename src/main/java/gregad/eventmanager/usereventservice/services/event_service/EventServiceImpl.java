@@ -265,7 +265,7 @@ public class EventServiceImpl implements EventService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Event id:" + eventId + " not found");
         });
-        if (!eventEntity.getInvited().contains(user)){
+        if (eventEntity.getInvited().stream().noneMatch(u->u.getId()==user.getId())){
             eventEntity.getInvited().add(user);
         }
         eventRepo.save(eventEntity);
@@ -279,7 +279,7 @@ public class EventServiceImpl implements EventService {
                     "Event id:" + eventId + " not found");
         });
         List<User> approvedGuests = eventEntity.getApprovedGuests();
-        if (!approvedGuests.contains(user)){
+        if (approvedGuests.stream().noneMatch(u->u.getId()==user.getId())){
             approvedGuests.add(user);
         }
         eventRepo.save(eventEntity);
